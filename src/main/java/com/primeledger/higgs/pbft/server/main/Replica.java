@@ -18,6 +18,8 @@ import com.primeledger.higgs.pbft.server.worker.PersistLogThread;
 import com.primeledger.higgs.pbft.server.worker.SendThread;
 
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.ReentrantLock;
 
 
 public class Replica implements IRecoverable {
@@ -37,6 +39,11 @@ public class Replica implements IRecoverable {
     private ILogState logState = null;
 
     private ServerCommunicationSystem scs = null;
+
+    private ReentrantLock recoverLock = new ReentrantLock();
+
+    private Condition recoverCondtion = recoverLock.newCondition();
+
 
     public Replica(Config config) {
         controller = new ServerViewController(config);
@@ -63,7 +70,7 @@ public class Replica implements IRecoverable {
         SendThread sendThread = new SendThread(outQueue, controller, scs);
         sendThread.start();
 
-        PersistLogThread persistLogThread = new PersistLogThread(persistQueue, controller, scs, this);
+        PersistLogThread persistLogThread = new PersistLogThread(persistQueue, controller, scs, this,recoverLock,recoverCondtion);
         persistLogThread.start();
 
 
@@ -90,11 +97,13 @@ public class Replica implements IRecoverable {
             StateLog[] stateLogs = recoverMessage.getStates();
             for (StateLog stateLog : stateLogs) {
                 if (stateLog.getCp() == 1 + controller.getStableCp() && commitConsensus.commit(stateLog.getOperation())) {
-                    //TODO persist state log to db
                     logState.putLog(stateLog);
                     logState.putStableCp(controller.incStableCp());
                 }
             }
+            recoverLock.lock();
+            recoverCondtion.signal();
+            recoverLock.unlock();
         }
 
         return false;
@@ -105,9 +114,9 @@ public class Replica implements IRecoverable {
         if (commitConsensus.commit(stateLog.getOperation())) {
             logState.putLog(stateLog);
             logState.putStableCp(controller.incStableCp());
-            if (controller.getStableCp() - controller.getLowStableCp() > 200) {
-                new DeleteLogThread(logState,controller.getLowStableCp(),controller.getLowStableCp()+200).start();
-                controller.setLowStableCp(controller.getLowStableCp() + 201);
+            if (controller.getStableCp() - controller.getLowStableCp() > 2000) {
+                new DeleteLogThread(logState, controller.getLowStableCp(), controller.getLowStableCp() + 999).start();
+                controller.setLowStableCp(controller.getLowStableCp() + 1000);
                 logState.setLowStableCp(controller.getLowStableCp());
             }
         }

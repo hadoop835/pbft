@@ -92,7 +92,7 @@ public class ConsensusResolver extends Thread {
         myConsensus.setTimeStamp(consensus.getTimeStamp());
         myConsensus.setSender(controller.getMyId());
         consensus.setCp(controller.getHighCp());
-        ePoch.addCp(controller.getStableCp(), controller.getMyId());
+        ePoch.addCp(controller.getHighCp(), controller.getMyId());
         byte[] serial = myConsensus.getSerializeMessage();
         byte[] signature = MessageUtils.signMessage(controller.getPrivateKey(), serial);
         myConsensus.setSignature(signature);
@@ -154,22 +154,22 @@ public class ConsensusResolver extends Thread {
             ePoch.setCommit(true);
             byte[] request = ePoch.getRequest();
 
-            //TODO write execute command to the log
             try {
                 ePoch.getMaxSameCp();
                 StateLog state = new StateLog();
                 state.setCp(ePoch.getConsensusCp());
                 state.setOperation(request);
 
-                if (controller.getHighCp() != ePoch.getConsensusCp()) {
+                if (controller.getHighCp() < ePoch.getConsensusCp()) {
                     controller.setHighCp(ePoch.getConsensusCp());
                 }
                 controller.incHighCp();
                 stateQueu.offer(state);
                 Object obj = MessageUtils.byteToObj(request);
+                controller.setHaveMsgProcess(false);
+                controller.notifyLastConsensusFinish();
                 System.out.println("node " + controller.getMyId() + " receive " + obj + " high check point:" + controller.getHighCp() + " max count of check point:" + ePoch.getMaxSameCp() + " cp:" + ePoch.getConsensusCp());
 
-                //TODO notify consensus have been sovled
             } catch (IOException e) {
                 e.printStackTrace();
             } catch (ClassNotFoundException e) {

@@ -64,6 +64,9 @@ public class EPoch {
      */
     private int cp[];
 
+
+    private  int checkPoint;
+
     private int consensusCp;
 
     private ReentrantReadWriteLock rw = new ReentrantReadWriteLock();
@@ -242,4 +245,13 @@ public class EPoch {
     public int getConsensusCp(){
         return consensusCp;
     }
+
+    public int getCheckPoint() {
+        return checkPoint;
+    }
+
+    public void setCheckPoint(int checkPoint) {
+        this.checkPoint = checkPoint;
+    }
+
 }

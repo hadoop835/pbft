@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
@@ -36,6 +37,10 @@ public class ServerViewController {
 
     private boolean haveMsgProcess = false;
 
+    private Condition canPrepare;
+
+    private ReentrantLock messageLock;
+
 
     /**
      * the lowest check point use to delete the log
@@ -52,6 +57,7 @@ public class ServerViewController {
     }
 
     public void initStableCp(int cp) {
+        System.out.println("init stable check point:" + cp);
         stableCp.set(cp);
         highCp.set(cp + 1);
     }
@@ -66,6 +72,16 @@ public class ServerViewController {
 
     public int getCurrentLeader() {
         return leader;
+    }
+
+    public int getRandomNode(){
+        int n = getCurrentViewN();
+        Random random = new Random();
+        int ans = random.nextInt(n);
+        if(ans == id){
+            return getRandomNode();
+        }
+        return ans;
     }
 
     public boolean amITheLeader() {
@@ -117,12 +133,8 @@ public class ServerViewController {
     }
 
 
-    public void isHaveMsgProcess() {
-        if (haveMsgProcess) {
-            lock.lock();
-            condition.awaitUninterruptibly();
-            lock.unlock();
-        }
+    public boolean isHaveMsgProcess() {
+        return haveMsgProcess;
     }
 
     public int getLowStableCp() {
@@ -131,16 +143,23 @@ public class ServerViewController {
 
     public void setLowStableCp(int lowStableCp) {
         this.lowStableCp = lowStableCp;
+        System.out.println("low stable check point!");
     }
 
 
-    public void setHaveMsgProcess(){
-        haveMsgProcess = true;
+    public void setHaveMsgProcess(boolean isHave) {
+        haveMsgProcess = isHave;
+    }
+
+    public void notifyLastConsensusFinish(){
+        lock.lock();
+        canPrepare.signal();
+        lock.unlock();
     }
 
 
-    public void processDown() {
-        haveMsgProcess = false;
-        condition.signal();
+    public void setCanPrepare(ReentrantLock lock,Condition canPrepare){
+        this.lock = lock;
+        this.canPrepare = canPrepare;
     }
 }

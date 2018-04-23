@@ -26,12 +26,16 @@ public class BechMarkTest {
 
         long start = System.currentTimeMillis();
         System.out.println("start time " + start);
-        for (int i = 0; i < 10000; i++) {
+        for (int i = 0; i < 100000; i++) {
             try {
-                Thread.sleep(200);
-                client.postTask(new String("test" + i));
+                Thread.sleep(50);
+                String command = "test" + i;
+                client.postTask(command);
+                System.out.println("send command " + command);
+
             } catch (IOException e) {
                 e.printStackTrace();
+
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }

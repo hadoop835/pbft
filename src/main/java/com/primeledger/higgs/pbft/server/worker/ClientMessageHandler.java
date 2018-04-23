@@ -22,7 +22,10 @@ public class ClientMessageHandler extends SimpleChannelInboundHandler<BaseMessag
 
 //        System.out.println("receive client message from "+message.getSender());
         if(message.getType() == MessageType.REQUEST){
-            request.offer(message);
+            if(!request.offer(message)){
+                //TODO the message is full of the queue ,add to queue failed
+                System.out.println("the request queue size is full");
+            }
         }
     }
 

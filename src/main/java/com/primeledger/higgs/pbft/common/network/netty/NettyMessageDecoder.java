@@ -15,8 +15,8 @@ public class NettyMessageDecoder extends ByteToMessageDecoder{
         if(n < 10){
             return;
         }
-        int dataLength = byteBuf.getInt(byteBuf.readerIndex());
-        if(byteBuf.readableBytes() < dataLength +4) return;
+//        int dataLength = byteBuf.getInt(byteBuf.readerIndex());
+//        if(byteBuf.readableBytes() < dataLength +4) return;
 
         RequestMessage request = new RequestMessage();
         request.read(byteBuf);

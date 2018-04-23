@@ -36,7 +36,7 @@ public class ClientMessagerResolver extends Thread {
         this.requestQueue = requestQueue;
         this.controller = controller;
         this.consensusManager = consensusManager;
-
+        controller.setCanPrepare(messageLock,canPrepare);
     }
 
     @Override
@@ -49,7 +49,6 @@ public class ClientMessagerResolver extends Thread {
                 }
 
 //                controller.isHaveMsgProcess();
-                messageLock.lock();
 
                 if (message.getType() == MessageType.REQUEST) {
                     RequestMessage request = (RequestMessage) message;
@@ -76,6 +75,12 @@ public class ClientMessagerResolver extends Thread {
 
 
                     if (controller.amITheLeader()) {
+                        if(controller.isHaveMsgProcess()){
+                            messageLock.lock();
+                            canPrepare.await(1000L,TimeUnit.MILLISECONDS);
+                            messageLock.unlock();
+                        }
+                        controller.setHaveMsgProcess(true);
 //                        controller.setHaveMsgProcess();
                         ConsensusMessage consensusMessage = new ConsensusMessage();
                         consensusMessage.setSender(controller.getMyId());
@@ -84,7 +89,7 @@ public class ClientMessagerResolver extends Thread {
                         consensusMessage.setTimeStamp(request.getTimeaStamp());
                         consensusMessage.setClientId(request.getSender());
 
-                        consensusMessage.setCp(controller.getStableCp());
+                        consensusMessage.setCp(controller.getHighCp());
                         consensusMessage.setRequest(requestSeriaize);
 
                         consensusMessage.setDigest(digest);
@@ -95,7 +100,6 @@ public class ClientMessagerResolver extends Thread {
                         outQueue.offer(consensusMessage);
                     }
                 }
-                messageLock.unlock();
             } catch (InterruptedException e) {
                 e.printStackTrace();
             } catch (NoSuchAlgorithmException e) {

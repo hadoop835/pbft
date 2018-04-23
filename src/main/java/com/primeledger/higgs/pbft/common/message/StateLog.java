@@ -1,10 +1,8 @@
 package com.primeledger.higgs.pbft.common.message;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
+import java.io.*;
 
-public class StateLog {
+public class StateLog implements Externalizable {
 
     private int cp;
     private byte[] operation;
@@ -25,7 +23,7 @@ public class StateLog {
         this.operation = operation;
     }
 
-    public void read(DataInputStream inputStream){
+    public void read(DataInputStream inputStream) {
         try {
             cp = inputStream.readInt();
             int length = inputStream.readInt();
@@ -36,7 +34,7 @@ public class StateLog {
         }
     }
 
-    public void write(DataOutputStream outputStream){
+    public void write(DataOutputStream outputStream) {
 
         try {
             outputStream.writeInt(cp);
@@ -46,5 +44,27 @@ public class StateLog {
             e.printStackTrace();
         }
 
+    }
+
+    @Override
+    public void writeExternal(ObjectOutput out) throws IOException {
+        out.writeInt(cp);
+        if (operation == null || operation.length == 0) {
+            out.writeInt(0);
+        } else {
+            out.writeInt(operation.length);
+            out.write(operation);
+        }
+    }
+
+    @Override
+    public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
+        cp = in.readInt();
+        int len = in.readInt();
+        operation = new byte[len];
+        int read = 0;
+        do {
+            read += in.read(operation, read, len - read);
+        } while (read < len);
     }
 }

@@ -2,11 +2,9 @@ package com.primeledger.higgs.pbft.common.message;
 
 import io.netty.buffer.ByteBuf;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
+import java.io.*;
 
-public class BaseMessage {
+public class BaseMessage implements Externalizable{
 
     protected byte[] signature;
 
@@ -84,4 +82,15 @@ public class BaseMessage {
         return msg;
     }
 
+    @Override
+    public void writeExternal(ObjectOutput out) throws IOException {
+        out.writeInt(type.ordinal());
+        out.writeInt(sender);
+    }
+
+    @Override
+    public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
+        type = MessageType.values()[in.readInt()];
+        sender = in.readInt();
+    }
 }

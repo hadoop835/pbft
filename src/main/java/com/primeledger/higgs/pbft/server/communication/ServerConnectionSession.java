@@ -5,6 +5,7 @@ import com.primeledger.higgs.pbft.common.message.RecoverMessage;
 import com.primeledger.higgs.pbft.common.network.connection.NodeInfo;
 import com.primeledger.higgs.pbft.common.message.BaseMessage;
 import com.primeledger.higgs.pbft.common.message.ConsensusMessage;
+import com.primeledger.higgs.pbft.common.utils.MessageUtils;
 import com.primeledger.higgs.pbft.server.recover.IRecoverable;
 
 import java.io.DataInputStream;
@@ -85,7 +86,10 @@ public class ServerConnectionSession extends Thread {
             return;
         }
         try {
-            message.write(outputStream);
+//            message.write(outputStream);
+            byte[] data = MessageUtils.objToBytes(message);
+            outputStream.writeInt(data.length);
+            outputStream.write(data);
             outputStream.flush();
         } catch (IOException e) {
             System.out.println("--------send message failed----------");
@@ -111,33 +115,47 @@ public class ServerConnectionSession extends Thread {
             if (socket != null && inputStream != null) {
                 try {
 //                int sender = inputStream.readInt();
+                    int length = inputStream.readInt();
+                    byte[] data = new byte[length];
 
-                    int t = inputStream.readInt();
-
-                    if (t < 0 || t > MessageType.values().length) {
-                        inputStream.reset();
+                    int read = 0;
+                    do{
+                        read += inputStream.read(data,read,length - read);
+                    }while(read < length);
+                    Object obj = MessageUtils.byteToObj(data);
+                    if(obj instanceof ConsensusMessage){
+                        inQueue.offer((ConsensusMessage)obj);
+                    }else if(obj instanceof  RecoverMessage){
+                        recoverable.recover((RecoverMessage)obj);
+                    }else{
+                        System.out.println("error!");
                     }
-                    MessageType type = MessageType.values()[t];
-                    switch (type) {
-                        case COMMIT:
-                        case PREPARE:
-                        case PRE_PREPARE:
-                            ConsensusMessage consensusMessage = new ConsensusMessage();
-                            consensusMessage.read(inputStream);
-                            consensusMessage.setType(type);
-                            inQueue.offer(consensusMessage);
-                            break;
-                        case BACK_SYC_LOG:
-                        case ASK_SYN_LOG:
-                            RecoverMessage recoverMessage = new RecoverMessage();
-                            recoverMessage.setType(type);
-                            recoverMessage.read(inputStream);
-                            recoverable.recover(recoverMessage);
-                            break;
-                        default:
-                            System.out.println("did not support message Type");
-                            break;
-                    }
+//                    int t = inputStream.readInt();
+//
+//                    if (t < 0 || t > MessageType.values().length) {
+//                        inputStream.reset();
+//                    }
+//                    MessageType type = MessageType.values()[t];
+//                    switch (type) {
+//                        case COMMIT:
+//                        case PREPARE:
+//                        case PRE_PREPARE:
+//                            ConsensusMessage consensusMessage = new ConsensusMessage();
+//                            consensusMessage.read(inputStream);
+//                            consensusMessage.setType(type);
+//                            inQueue.offer(consensusMessage);
+//                            break;
+//                        case BACK_SYC_LOG:
+//                        case ASK_SYN_LOG:
+//                            RecoverMessage recoverMessage = new RecoverMessage();
+//                            recoverMessage.setType(type);
+//                            recoverMessage.read(inputStream);
+//                            recoverable.recover(recoverMessage);
+//                            break;
+//                        default:
+//                            System.out.println("did not support message Type");
+//                            break;
+//                    }
 
 
 //                System.out.println(sender);
@@ -146,6 +164,8 @@ public class ServerConnectionSession extends Thread {
                     closeSocket();
                     reconnect(null);
                     continue;
+                } catch (ClassNotFoundException e) {
+                    e.printStackTrace();
                 }
             } else {
                 if (doWork) {

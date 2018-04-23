@@ -23,21 +23,23 @@ public class PersistLogThread extends Thread {
 
     private ServerViewController controller = null;
 
-    private ReentrantLock lock = new ReentrantLock();
+    private ReentrantLock lock = null;
 
-    private Condition condition = lock.newCondition();
+    private Condition condition = null;
 
     private MessageBroadcaster messageBroadcaster = null;
 
     private IRecoverable recoverable = null;
 
 
-    public PersistLogThread(BlockingQueue<StateLog> persistQueue, ServerViewController controller, MessageBroadcaster messageBroadcaster, IRecoverable recoverable) {
+    public PersistLogThread(BlockingQueue<StateLog> persistQueue, ServerViewController controller, MessageBroadcaster messageBroadcaster, IRecoverable recoverable,ReentrantLock lock,Condition condition) {
 
         this.persistQueue = persistQueue;
         this.controller = controller;
         this.messageBroadcaster = messageBroadcaster;
         this.recoverable = recoverable;
+        this.lock = lock;
+        this.condition = condition;
     }
 
     @Override
@@ -56,9 +58,9 @@ public class PersistLogThread extends Thread {
                     recoverMessage.setType(MessageType.ASK_SYN_LOG);
                     recoverMessage.setStartCp(controller.getStableCp() + 1);
                     recoverMessage.setSender(controller.getMyId());
-                    messageBroadcaster.send(controller.getCurrentLeader(), recoverMessage);
+                    messageBroadcaster.send(controller.getRandomNode(), recoverMessage);
                     lock.lock();
-                    condition.await(15000, TimeUnit.MILLISECONDS);
+                    condition.await(6000, TimeUnit.MILLISECONDS);
                     lock.unlock();
                 }
                 if (stateLog.getCp() == controller.getStableCp() + 1) {

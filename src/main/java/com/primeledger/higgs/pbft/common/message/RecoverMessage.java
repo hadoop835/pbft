@@ -6,7 +6,7 @@ import java.io.*;
  * @author hanson
  * recover from log
  */
-public class RecoverMessage extends BaseMessage{
+public class RecoverMessage extends BaseMessage {
 
 
     private int startCp;
@@ -14,7 +14,6 @@ public class RecoverMessage extends BaseMessage{
     private int endCp;
 
     private StateLog[] states;
-
 
 
     public int getStartCp() {
@@ -47,27 +46,58 @@ public class RecoverMessage extends BaseMessage{
         startCp = inputStream.readInt();
         endCp = inputStream.readInt();
         int len = inputStream.readInt();
-        if(len > 0) {
+        if (len > 0) {
             states = new StateLog[len];
             for (int i = 0; i < len; i++) {
+
                 states[i] = new StateLog();
                 states[i].read(inputStream);
             }
         }
     }
+
     @Override
     public void write(DataOutputStream outputStream) throws IOException {
         super.write(outputStream);
         outputStream.writeInt(startCp);
         outputStream.writeInt(endCp);
-        if(states!=null&&states.length >0){
+        if (states != null && states.length > 0) {
             outputStream.writeInt(states.length);
-            for(StateLog state:states){
+            for (StateLog state : states) {
                 state.write(outputStream);
             }
-        }else{
+        } else {
             outputStream.writeInt(0);
         }
-        ByteArrayOutputStream bOut = new ByteArrayOutputStream(2048);
+    }
+
+    @Override
+    public void writeExternal(ObjectOutput out) throws IOException {
+        super.writeExternal(out);
+        out.writeInt(startCp);
+        out.writeInt(endCp);
+        if (states != null && states.length > 0) {
+            out.writeInt(states.length);
+            for (StateLog state : states) {
+                state.writeExternal(out);
+            }
+        } else {
+            out.writeInt(0);
+        }
+    }
+
+    @Override
+    public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
+        super.readExternal(in);
+        startCp = in.readInt();
+        endCp = in.readInt();
+        int len = in.readInt();
+        if (len > 0) {
+            states = new StateLog[len];
+            for (int i = 0; i < len; i++) {
+                states[i] = new StateLog();
+                states[i].readExternal(in);
+            }
+        }
     }
 }

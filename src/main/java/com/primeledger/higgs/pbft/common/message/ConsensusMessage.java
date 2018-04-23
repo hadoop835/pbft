@@ -1,11 +1,8 @@
 package com.primeledger.higgs.pbft.common.message;
 
-import java.io.ByteArrayOutputStream;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
+import java.io.*;
 
-public class ConsensusMessage extends BaseMessage{
+public class ConsensusMessage extends BaseMessage {
 
     /**
      * the node cluster current view
@@ -163,4 +160,45 @@ public class ConsensusMessage extends BaseMessage{
         this.cp = cp;
     }
 
+    @Override
+    public void writeExternal(ObjectOutput out) throws IOException {
+        super.writeExternal(out);
+        out.writeInt(view);
+        out.writeLong(sequnce);
+        out.writeLong(timeStamp);
+        out.writeInt(clientId);
+        out.writeInt(cp);
+
+        out.writeInt(digest.length);
+        out.write(digest);
+
+        out.writeInt(signature.length);
+        out.write(signature);
+    }
+
+    @Override
+    public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
+        super.readExternal(in);
+        view = in.readInt();
+        sequnce = in.readLong();
+        timeStamp = in.readLong();
+        clientId = in.readInt();
+        cp = in.readInt();
+
+        int digestLength = in.readInt();
+        digest = new byte[digestLength];
+        int read = 0;
+        do {
+            read += in.read(digest, read, digestLength - read);
+        } while (read < digestLength);
+
+
+        int signatureLength = in.readInt();
+        signature = new byte[signatureLength];
+        read = 0;
+        do {
+            read += in.read(signature, read, signatureLength - read);
+        } while (read < signatureLength);
+
+    }
 }
